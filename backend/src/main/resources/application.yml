@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: project-pulse-backend
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/project_pulse}
+    username: ${DB_USERNAME:project_pulse}
+    password: ${DB_PASSWORD:project_pulse}
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:${PORT:8080}}
+  forward-headers-strategy: framework
+  servlet:
+    context-path: /api
+    session:
+      timeout: ${SESSION_TIMEOUT:30m}
+      tracking-modes: cookie
+      cookie:
+        name: ${SESSION_COOKIE_NAME:PROJECT_PULSE_SESSION}
+        http-only: true
+        same-site: ${SESSION_COOKIE_SAME_SITE:lax}
+        secure: ${SESSION_COOKIE_SECURE:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  security:
+    require-https: ${REQUIRE_HTTPS:true}
+    allowed-origins: ${ALLOWED_ORIGINS:}
+  email:
+    enabled: ${APP_EMAIL_ENABLED:false}
+    base-url: ${APP_EMAIL_BASE_URL:}
+    from-address: ${APP_EMAIL_FROM_ADDRESS:noreply@projectpulse.local}
+    from-name: ${APP_EMAIL_FROM_NAME:Project Pulse Team}
+  auth:
+    bootstrap-admin:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+      allow-nonlocal: ${BOOTSTRAP_ADMIN_ALLOW_NONLOCAL:false}
+      email: ${BOOTSTRAP_ADMIN_EMAIL:admin@projectpulse.local}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:Admin123!}
+      first-name: ${BOOTSTRAP_ADMIN_FIRST_NAME:Project}
+      last-name: ${BOOTSTRAP_ADMIN_LAST_NAME:Pulse Admin}

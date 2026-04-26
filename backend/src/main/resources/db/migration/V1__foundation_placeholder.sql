@@ -1,0 +1,2 @@
+-- Foundation baseline migration.
+-- Domain tables should be introduced incrementally as each use case is implemented.

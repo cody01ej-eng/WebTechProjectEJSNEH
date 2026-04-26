@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:projectpulse;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+app:
+  security:
+    require-https: false
+    allowed-origins:
+      - http://localhost:5173
+  email:
+    enabled: false
+  auth:
+    bootstrap-admin:
+      enabled: false
