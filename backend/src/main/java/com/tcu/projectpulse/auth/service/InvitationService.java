@@ -88,8 +88,9 @@ public class InvitationService {
         if (invitation.getType() != expectedType) {
             throw new InvalidArgumentException("Invitation type does not match registration flow");
         }
-        // FAILED means email delivery failed but the token is still valid (e.g. no SMTP configured locally)
-        // Allow registration to proceed so the token can still be used.
+        if (invitation.getStatus() == InvitationStatus.FAILED) {
+            throw new InvalidArgumentException("Invitation delivery failed. Ask an admin to resend your invitation");
+        }
         if (invitation.getStatus() == InvitationStatus.ACCEPTED) {
             throw new InvalidArgumentException("Invitation has already been used");
         }
