@@ -63,4 +63,5 @@ describe('sessionStore', () => {
     expect(sessionStore.state.initialized).toBe(true)
     expect(sessionStore.isAuthenticated.value).toBe(false)
   })
+
 })

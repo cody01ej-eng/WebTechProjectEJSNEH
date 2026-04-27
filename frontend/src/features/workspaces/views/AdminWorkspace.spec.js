@@ -171,6 +171,27 @@ describe('AdminWorkspace', () => {
     expect(wrapper.text()).toContain('Team selected from directory.')
   })
 
+  it('creates a rubric from the Rubrics and Sections panel (UC-1)', async () => {
+    mocks.createRubric.mockResolvedValue({
+      id: 6,
+      name: 'Custom Rubric',
+      criteria: []
+    })
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const rubricPanel = findPanel(wrapper, 'Rubrics and Sections')
+    await findField(rubricPanel, 'Rubric Name').setValue('Custom Rubric')
+    await rubricPanel.findAll('form')[0].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(mocks.createRubric).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Custom Rubric' })
+    )
+    expect(wrapper.text()).toContain('Rubric created.')
+  })
+
   it('syncs instructor user selection into account editing and access actions', async () => {
     mocks.findUsers.mockResolvedValue([
       {

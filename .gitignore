@@ -16,7 +16,7 @@ backend/.env.*.local
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
-docs/tutorial*
+docs/*tutorial*
 
 .DS_Store
 Thumbs.db
