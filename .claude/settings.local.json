@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.youtube.com)",
+      "WebSearch",
+      "WebFetch(domain:www.javaguides.net)",
+      "WebFetch(domain:rameshfadatare.medium.com)",
+      "WebFetch(domain:www.udemy.com)",
+      "WebFetch(domain:invidious.io)",
+      "WebFetch(domain:inv.nadeko.net)",
+      "WebFetch(domain:router.vuejs.org)",
+      "Bash(./mvnw spring-boot:run -Dspring-boot.run.profiles=local)",
+      "Bash(\"/c/Program Files/JetBrains/IntelliJ IDEA 2025.3.2/plugins/maven/lib/maven3/bin/mvn\" spring-boot:run -Dspring-boot.run.profiles=local)",
+      "Bash(\"/c/Program Files/JetBrains/IntelliJ IDEA 2025.3.2/plugins/maven/lib/maven3/bin/mvn\" test)"
+    ]
+  }
+}
