@@ -1,11 +1,14 @@
 package com.tcu.projectpulse.project.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -13,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tcu.projectpulse.auth.service.AuthorizationService;
 import com.tcu.projectpulse.project.domain.ActivityCategory;
 import com.tcu.projectpulse.project.domain.ActivityProgressStatus;
+import com.tcu.projectpulse.project.dto.SectionPeerEvaluationReportResponse;
 import com.tcu.projectpulse.project.dto.StudentPeerEvaluationReportResponse;
 import com.tcu.projectpulse.project.dto.StudentWarReportResponse;
 import com.tcu.projectpulse.project.dto.StudentWorkspaceContextResponse;
@@ -307,6 +311,171 @@ class ProjectControllerSecurityTest {
                 .andExpect(jsonPath("$.flag").value(true))
                 .andExpect(jsonPath("$.data.studentId").value(7))
                 .andExpect(jsonPath("$.data.weeks[0].activities[0].teamName").value("Pulse Team"));
+    }
+
+    // ─── PUT /project/war/activities/{activityId} ──────────────────────────────────
+
+    @Test
+    void updateWarActivityWithoutAuthenticationReturnsUnauthorized() throws Exception {
+        mockMvc.perform(put("/project/war/activities/31")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content(validWarRequest()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.UNAUTHORIZED))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void updateWarActivityWithoutCsrfTokenReturnsForbidden() throws Exception {
+        mockMvc.perform(put("/project/war/activities/31")
+                        .contentType(APPLICATION_JSON)
+                        .content(validWarRequest()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("CSRF token missing or invalid"));
+    }
+
+    @Test
+    @WithMockUser(roles = "INSTRUCTOR")
+    void updateWarActivityAsInstructorReturnsForbidden() throws Exception {
+        mockMvc.perform(put("/project/war/activities/31")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content(validWarRequest()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void updateWarActivityAsStudentReturnsData() throws Exception {
+        when(warService.updateActivity(eq(31L), any())).thenReturn(
+                new WeeklyActivityResponse(
+                        31L, 7L, "Jane Doe", 19L, "Pulse Team",
+                        LocalDate.of(2026, 4, 20),
+                        ActivityCategory.DEVELOPMENT,
+                        "Build the secured dashboard",
+                        "Implemented the authenticated routing flow.",
+                        BigDecimal.valueOf(4.0), BigDecimal.valueOf(3.5),
+                        ActivityProgressStatus.DONE
+                )
+        );
+
+        mockMvc.perform(put("/project/war/activities/31")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content(validWarRequest()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.id").value(31));
+    }
+
+    // ─── DELETE /project/war/activities/{activityId} ─────────────────────────────
+
+    @Test
+    void deleteWarActivityWithoutAuthenticationReturnsUnauthorized() throws Exception {
+        mockMvc.perform(delete("/project/war/activities/31").with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.UNAUTHORIZED))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    @WithMockUser(roles = "INSTRUCTOR")
+    void deleteWarActivityAsInstructorReturnsForbidden() throws Exception {
+        mockMvc.perform(delete("/project/war/activities/31").with(csrf()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void deleteWarActivityAsStudentReturnsSuccess() throws Exception {
+        mockMvc.perform(delete("/project/war/activities/31").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.message").value("Delete WAR activity success"));
+    }
+
+    // ─── GET /project/reports/sections/{sectionId}/peer-evaluations ───────────────
+
+    @Test
+    void getSectionPeerEvaluationReportWithoutAuthenticationReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/project/reports/sections/12/peer-evaluations")
+                        .param("weekStartDate", "2026-04-20"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.UNAUTHORIZED))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void getSectionPeerEvaluationReportAsStudentReturnsForbidden() throws Exception {
+        mockMvc.perform(get("/project/reports/sections/12/peer-evaluations")
+                        .param("weekStartDate", "2026-04-20"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    @Test
+    @WithMockUser(roles = "INSTRUCTOR")
+    void getSectionPeerEvaluationReportAsInstructorReturnsData() throws Exception {
+        when(reportingService.getSectionPeerEvaluationReport(12L, LocalDate.of(2026, 4, 20))).thenReturn(
+                new SectionPeerEvaluationReportResponse(12L, "CS-301", LocalDate.of(2026, 4, 20),
+                        List.of(), List.of())
+        );
+
+        mockMvc.perform(get("/project/reports/sections/12/peer-evaluations")
+                        .param("weekStartDate", "2026-04-20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.sectionId").value(12));
+    }
+
+    // ─── GET /project/reports/students/{studentId}/peer-evaluations/instructor ────
+
+    @Test
+    void getInstructorStudentReportWithoutAuthenticationReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/project/reports/students/7/peer-evaluations/instructor"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.UNAUTHORIZED))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void getInstructorStudentReportAsStudentReturnsForbidden() throws Exception {
+        mockMvc.perform(get("/project/reports/students/7/peer-evaluations/instructor"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    @Test
+    @WithMockUser(roles = "INSTRUCTOR")
+    void getInstructorStudentReportAsInstructorReturnsData() throws Exception {
+        when(reportingService.getInstructorStudentPeerEvaluationReport(7L, null, null)).thenReturn(
+                new StudentPeerEvaluationReportResponse(7L, "Jane Doe", List.of())
+        );
+
+        mockMvc.perform(get("/project/reports/students/7/peer-evaluations/instructor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.studentId").value(7));
     }
 
     private String validWarRequest() throws Exception {
