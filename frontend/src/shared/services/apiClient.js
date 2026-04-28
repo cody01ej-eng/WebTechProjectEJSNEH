@@ -66,15 +66,19 @@ async function request(path, options = {}, params, retryOnCsrfFailure = true) {
   const method = (options.method ?? 'GET').toUpperCase()
   const headers = {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
     ...(options.headers ?? {})
   }
+  const hasBody = options.body !== undefined
 
   if (isMutationMethod(method)) {
     const csrf = await loadCsrfToken()
     if (csrf?.token) {
       headers[csrf.headerName] = csrf.token
     }
+  }
+
+  if (hasBody && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json'
   }
 
   const response = await fetch(buildUrl(path, params), {
