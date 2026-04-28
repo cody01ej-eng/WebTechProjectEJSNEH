@@ -8,6 +8,7 @@
         setup from their invitation tokens and land directly in their protected dashboards.
       </p>
       <p v-if="invitationLinkMessage" class="status">{{ invitationLinkMessage }}</p>
+      <p v-if="startupError && !errorMessage" class="status status--error">{{ startupError }}</p>
     </header>
 
     <div class="panel-grid">
@@ -131,6 +132,7 @@ const activeInviteMode = computed(() => {
   const mode = typeof route.query.mode === 'string' ? route.query.mode : ''
   return ['student-register', 'instructor-register'].includes(mode) ? mode : null
 })
+const startupError = computed(() => session.startupError?.value ?? '')
 
 const loginForm = reactive({
   email: 'admin@projectpulse.local',
