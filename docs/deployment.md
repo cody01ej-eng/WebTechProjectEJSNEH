@@ -71,7 +71,7 @@ Use [frontend/.env.example](../frontend/.env.example) as the baseline.
 
 - `VITE_API_BASE_URL=https://your-backend-app.azurewebsites.net/api`
 
-The checked-in [frontend/staticwebapp.config.json](../frontend/staticwebapp.config.json) handles Vue history-mode route fallback so direct loads of `/admin`, `/student`, or `/instructor` resolve back to `index.html`.
+The checked-in [frontend/public/staticwebapp.config.json](../frontend/public/staticwebapp.config.json) handles Vue history-mode route fallback so direct loads of `/admin`, `/student`, or `/instructor` resolve back to `index.html`.
 
 ---
 
