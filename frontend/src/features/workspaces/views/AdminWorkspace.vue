@@ -74,7 +74,9 @@
       </button>
     </div>
 
-    <div class="panel-grid" v-show="activeTab === 'setup'">
+    <Transition name="tab-fade" mode="out-in">
+      <div :key="activeTab" class="tab-content">
+    <div class="panel-grid" v-if="activeTab === 'setup'">
       <article class="panel">
         <div class="panel__header">
           <h3>Rubrics and Sections</h3>
@@ -235,7 +237,7 @@
       </article>
     </div>
 
-    <div class="panel-grid" v-show="activeTab === 'teams'">
+    <div class="panel-grid" v-if="activeTab === 'teams'">
       <article class="panel">
         <div class="panel__header">
           <h3>Team Operations</h3>
@@ -367,7 +369,7 @@
       </article>
     </div>
 
-    <div class="panel-grid" v-show="activeTab === 'access'">
+    <div class="panel-grid" v-if="activeTab === 'access'">
       <article class="panel">
         <div class="panel__header">
           <h3>Invitations and Access</h3>
@@ -441,7 +443,7 @@
       </article>
     </div>
 
-    <div class="panel-grid" v-show="activeTab === 'users'">
+    <div class="panel-grid" v-if="activeTab === 'users'">
       <article class="panel">
         <div class="panel__header">
           <h3>User Directory</h3>
@@ -550,6 +552,8 @@
         <pre class="code-block">{{ latestResponse }}</pre>
       </article>
     </div>
+      </div>
+    </Transition>
   </section>
 </template>
 
