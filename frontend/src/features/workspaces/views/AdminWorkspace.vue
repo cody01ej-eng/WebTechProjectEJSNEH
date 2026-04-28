@@ -542,10 +542,10 @@
         </div>
       </article>
 
-      <article class="panel">
+      <article v-if="isDev" class="panel">
         <div class="panel__header">
           <h3>Latest Admin Response</h3>
-          <span class="chip">JSON Output</span>
+          <span class="chip">Dev Only</span>
         </div>
         <pre class="code-block">{{ latestResponse }}</pre>
       </article>
@@ -602,6 +602,7 @@ const tabs = [
   { id: 'access', label: 'Access' },
   { id: 'users', label: 'Users' },
 ]
+const isDev = import.meta.env.DEV
 
 const rubricForm = reactive({
   name: 'Peer Eval Rubric v1',
