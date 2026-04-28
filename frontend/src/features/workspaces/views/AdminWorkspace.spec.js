@@ -230,4 +230,144 @@ describe('AdminWorkspace', () => {
     expect(focusPanel.text()).toContain('Morgan J Lee')
     expect(wrapper.text()).toContain('User selected from directory.')
   })
+
+  it('finds sections using a name filter from the Section Directory panel (UC-2)', async () => {
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
+    await findField(sectionDirectoryPanel, 'Section Name Filter').setValue('design')
+    await sectionDirectoryPanel.findAll('form')[0].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(mocks.getSections).toHaveBeenCalledWith('design')
+    expect(wrapper.text()).toContain('Loaded 1 section record(s).')
+  })
+
+  it('loads a section detail from the directory list (UC-3)', async () => {
+    mocks.getSection.mockResolvedValue({ ...sectionRecord })
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
+    await findButton(sectionDirectoryPanel, 'Load Section Detail').trigger('click')
+    await flushPromises()
+
+    expect(mocks.getSection).toHaveBeenCalledWith(12)
+    expect(sectionDirectoryPanel.text()).toContain('Loaded Section')
+    expect(wrapper.text()).toContain('Section loaded.')
+  })
+
+  it('creates a section from the Rubrics and Sections panel (UC-4)', async () => {
+    mocks.createSection.mockResolvedValue({ ...sectionRecord })
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const rubricAndSectionPanel = findPanel(wrapper, 'Rubrics and Sections')
+    await findField(rubricAndSectionPanel, 'Section Name').setValue('2026-2027')
+    await findField(rubricAndSectionPanel, 'Start Date').setValue('2026-08-24')
+    await findField(rubricAndSectionPanel, 'End Date').setValue('2027-05-01')
+    await findField(rubricAndSectionPanel, 'Rubric').setValue(5)
+    await rubricAndSectionPanel.findAll('form')[1].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(mocks.createSection).toHaveBeenCalledWith(
+      expect.objectContaining({ name: '2026-2027' })
+    )
+    expect(wrapper.text()).toContain('Section created.')
+  })
+
+  it('updates a section name via the edit section form (UC-5)', async () => {
+    mocks.updateSection.mockResolvedValue({ ...sectionRecord, name: 'Renamed Section' })
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
+    await findButton(sectionDirectoryPanel, 'Use Section').trigger('click')
+    await flushPromises()
+
+    await findField(sectionDirectoryPanel, 'Section Name').setValue('Renamed Section')
+    await sectionDirectoryPanel.findAll('form')[1].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(mocks.updateSection).toHaveBeenCalledWith(
+      12,
+      expect.objectContaining({ name: 'Renamed Section' })
+    )
+    expect(wrapper.text()).toContain('Section updated.')
+  })
+
+  it('configures active weeks for the selected section (UC-6)', async () => {
+    mocks.configureActiveWeeks.mockResolvedValue({ ...sectionRecord })
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
+    await findButton(sectionDirectoryPanel, 'Use Section').trigger('click')
+    await flushPromises()
+
+    await findField(sectionDirectoryPanel, 'Inactive Week Start Dates').setValue('2026-08-31')
+    await sectionDirectoryPanel.findAll('form')[2].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(mocks.configureActiveWeeks).toHaveBeenCalledWith(
+      12,
+      expect.objectContaining({ inactiveWeekStartDates: ['2026-08-31'] })
+    )
+    expect(wrapper.text()).toContain('Active weeks configured.')
+  })
+
+  it('invites students to a section and shows all-sent success message (UC-11)', async () => {
+    mocks.inviteStudents.mockResolvedValue([
+      { id: 100, email: 'student.one@tcu.edu', status: 'PENDING' },
+      { id: 101, email: 'student.two@tcu.edu', status: 'PENDING' }
+    ])
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
+    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
+
+    await findButton(sectionDirectoryPanel, 'Use Section').trigger('click')
+    await flushPromises()
+
+    await findField(invitationPanel, 'Student Emails').setValue('student.one@tcu.edu; student.two@tcu.edu')
+    await invitationPanel.findAll('form')[0].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(mocks.inviteStudents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sectionId: 12,
+        emails: ['student.one@tcu.edu', 'student.two@tcu.edu']
+      })
+    )
+    expect(wrapper.text()).toContain('Student invitation emails sent.')
+  })
+
+  it('shows partial failure summary when some student invitation emails fail to deliver (UC-11)', async () => {
+    mocks.inviteStudents.mockResolvedValue([
+      { id: 100, email: 'student.one@tcu.edu', status: 'PENDING' },
+      { id: 101, email: 'student.two@tcu.edu', status: 'FAILED' }
+    ])
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
+    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
+
+    await findButton(sectionDirectoryPanel, 'Use Section').trigger('click')
+    await flushPromises()
+
+    await findField(invitationPanel, 'Student Emails').setValue('student.one@tcu.edu; student.two@tcu.edu')
+    await invitationPanel.findAll('form')[0].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('1 email delivery failure')
+  })
 })

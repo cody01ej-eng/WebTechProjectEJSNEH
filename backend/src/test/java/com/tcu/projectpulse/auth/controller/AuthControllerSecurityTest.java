@@ -137,6 +137,43 @@ class AuthControllerSecurityTest {
     }
 
     @Test
+    @WithMockUser(roles = "INSTRUCTOR")
+    void inviteStudentsAsInstructorReturnsForbidden() throws Exception {
+        InvitationBatchRequest request = new InvitationBatchRequest(
+                1L,
+                List.of("student.one@tcu.edu"),
+                "Welcome to Project Pulse."
+        );
+
+        mockMvc.perform(post("/auth/invitations/students")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void inviteStudentsWithoutCsrfTokenReturnsForbidden() throws Exception {
+        InvitationBatchRequest request = new InvitationBatchRequest(
+                1L,
+                List.of("student.one@tcu.edu"),
+                "Welcome to Project Pulse."
+        );
+
+        mockMvc.perform(post("/auth/invitations/students")
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("CSRF token missing or invalid"));
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     void inviteStudentsAsAdminReturnsCreatedInvitations() throws Exception {
         InvitationBatchRequest request = new InvitationBatchRequest(
@@ -163,8 +200,61 @@ class AuthControllerSecurityTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
+                .andExpect(jsonPath("$.message").value("Student invitations processed"))
                 .andExpect(jsonPath("$.data[0].email").value("student.one@tcu.edu"))
+                .andExpect(jsonPath("$.data[0].status").value("PENDING"))
                 .andExpect(jsonPath("$.data[0].type").value("STUDENT"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void inviteStudentsWithEmptyEmailListReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/auth/invitations/students")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new InvitationBatchRequest(
+                                1L,
+                                List.of(),
+                                "Welcome to Project Pulse."
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.INVALID_ARGUMENT))
+                .andExpect(jsonPath("$.message").value("emails: At least one email is required"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void inviteStudentsWithInvalidEmailFormatReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/auth/invitations/students")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new InvitationBatchRequest(
+                                1L,
+                                List.of("not-a-valid-email"),
+                                "Welcome to Project Pulse."
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.INVALID_ARGUMENT));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void inviteStudentsWithBlankMessageReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/auth/invitations/students")
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new InvitationBatchRequest(
+                                1L,
+                                List.of("student.one@tcu.edu"),
+                                ""
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.INVALID_ARGUMENT))
+                .andExpect(jsonPath("$.message").value("message: Invitation message is required"));
     }
 
     @Test
