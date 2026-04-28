@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => ({
   registerStudent: vi.fn(),
   registerInstructor: vi.fn(),
   signIn: vi.fn(),
-  defaultRouteForRole: vi.fn((role) => `/${role.toLowerCase()}`)
+  defaultRouteForRole: vi.fn((role) => `/${role.toLowerCase()}`),
+  startupErrorMessage: ''
 }))
 
 vi.mock('@/features/auth/services/authService', () => ({
@@ -19,7 +20,12 @@ vi.mock('@/features/auth/services/authService', () => ({
 vi.mock('@/features/auth/stores/sessionStore', () => ({
   useSessionStore: () => ({
     signIn: mocks.signIn,
-    defaultRouteForRole: mocks.defaultRouteForRole
+    defaultRouteForRole: mocks.defaultRouteForRole,
+    startupError: {
+      get value() {
+        return mocks.startupErrorMessage
+      }
+    }
   })
 }))
 
@@ -51,6 +57,7 @@ describe('LoginView', () => {
     mocks.signIn.mockReset()
     mocks.defaultRouteForRole.mockReset()
     mocks.defaultRouteForRole.mockImplementation((role) => `/${role.toLowerCase()}`)
+    mocks.startupErrorMessage = ''
   })
 
   it('prefills student invitation registration from the link query parameters', async () => {
@@ -84,5 +91,12 @@ describe('LoginView', () => {
     expect(mocks.registerInstructor).not.toHaveBeenCalled()
     expect(mocks.signIn).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('Password confirmation must match the instructor password.')
+  })
+
+  it('shows the startup connection error when session bootstrap cannot reach the backend', async () => {
+    mocks.startupErrorMessage = 'Unable to reach the Project Pulse backend right now.'
+    const wrapper = await mountLoginView()
+
+    expect(wrapper.text()).toContain('Unable to reach the Project Pulse backend right now.')
   })
 })

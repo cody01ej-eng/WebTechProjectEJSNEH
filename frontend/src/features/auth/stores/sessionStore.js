@@ -4,7 +4,8 @@ import { resetCsrfTokenCache } from '@/shared/services/apiClient'
 
 const state = reactive({
   user: null,
-  initialized: false
+  initialized: false,
+  startupError: ''
 })
 
 function defaultRouteForRole(role) {
@@ -27,11 +28,15 @@ async function hydrateSession(force = false) {
 
   try {
     state.user = await getCurrentSession()
+    state.startupError = ''
   } catch (error) {
-    if (error.status !== 401) {
-      throw error
+    if (error.status === 401) {
+      state.user = null
+      state.startupError = ''
+    } else {
+      state.user = null
+      state.startupError = `Unable to reach the Project Pulse backend right now. Verify the deployed frontend/backend URLs and try again. ${error.message ?? ''}`.trim()
     }
-    state.user = null
   } finally {
     state.initialized = true
   }
@@ -44,6 +49,7 @@ async function signIn(credentials) {
   resetCsrfTokenCache()
   state.user = user
   state.initialized = true
+  state.startupError = ''
   return user
 }
 
@@ -54,6 +60,7 @@ async function signOut() {
     resetCsrfTokenCache()
     state.user = null
     state.initialized = true
+    state.startupError = ''
   }
 }
 
@@ -61,6 +68,7 @@ export function useSessionStore() {
   return {
     state: readonly(state),
     user: computed(() => state.user),
+    startupError: computed(() => state.startupError),
     isAuthenticated: computed(() => Boolean(state.user)),
     hydrateSession,
     signIn,
