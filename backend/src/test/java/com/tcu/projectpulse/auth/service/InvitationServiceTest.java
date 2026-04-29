@@ -16,6 +16,7 @@ import com.tcu.projectpulse.auth.repository.InvitationRepository;
 import com.tcu.projectpulse.project.domain.SeniorDesignSection;
 import com.tcu.projectpulse.project.repository.SeniorDesignSectionRepository;
 import com.tcu.projectpulse.shared.exception.InvalidArgumentException;
+import com.tcu.projectpulse.shared.exception.ResourceNotFoundException;
 import com.tcu.projectpulse.user.domain.UserAccount;
 import com.tcu.projectpulse.user.domain.UserRole;
 import com.tcu.projectpulse.user.domain.UserStatus;
@@ -145,6 +146,76 @@ class InvitationServiceTest {
 
         assertThat(response).singleElement().extracting(InvitationResponse::status).isEqualTo(InvitationStatus.FAILED);
         verify(invitationRepository, times(2)).save(any(Invitation.class));
+    }
+
+    @Test
+    void inviteStudentsThrowsInvalidArgumentWhenSectionIdIsNull() {
+        InvitationBatchRequest request = new InvitationBatchRequest(
+                null,
+                List.of("student.one@tcu.edu"),
+                "Use your registration link to complete setup."
+        );
+
+        assertThatThrownBy(() -> invitationService.inviteStudents(request))
+                .isInstanceOf(InvalidArgumentException.class)
+                .hasMessageContaining("section id");
+    }
+
+    @Test
+    void inviteStudentsThrowsResourceNotFoundWhenSectionDoesNotExist() {
+        when(sectionRepository.findById(99L)).thenReturn(Optional.empty());
+
+        InvitationBatchRequest request = new InvitationBatchRequest(
+                99L,
+                List.of("student.one@tcu.edu"),
+                "Use your registration link to complete setup."
+        );
+
+        assertThatThrownBy(() -> invitationService.inviteStudents(request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("99");
+    }
+
+    @Test
+    void inviteStudentsNormalizesEmailAddressesToLowercase() {
+        SeniorDesignSection section = new SeniorDesignSection(
+                "2026-2027",
+                LocalDate.of(2026, 8, 24),
+                LocalDate.of(2027, 5, 1),
+                null
+        );
+        UserAccount admin = new UserAccount(
+                "Project",
+                null,
+                "Admin",
+                "admin@projectpulse.local",
+                "{noop}",
+                UserRole.ADMIN,
+                UserStatus.ACTIVE,
+                null
+        );
+        InvitationBatchRequest request = new InvitationBatchRequest(
+                1L,
+                List.of("UPPER.CASE@TCU.EDU"),
+                "Use your registration link to complete setup."
+        );
+
+        when(sectionRepository.findById(1L)).thenReturn(Optional.of(section));
+        when(authenticatedUserService.requireCurrentUserAccount()).thenReturn(admin);
+        when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> {
+            Invitation invitation = invocation.getArgument(0);
+            if (invitation.getId() == null) {
+                ReflectionTestUtils.setField(invitation, "id", 100L);
+            }
+            return invitation;
+        });
+        when(invitationEmailService.sendInvitation(any(Invitation.class), any(UserAccount.class)))
+                .thenReturn(InvitationDeliveryAttempt.delivered("sent"));
+
+        List<InvitationResponse> response = invitationService.inviteStudents(request);
+
+        assertThat(response).singleElement().extracting(InvitationResponse::email)
+                .isEqualTo("upper.case@tcu.edu");
     }
 
     @Test

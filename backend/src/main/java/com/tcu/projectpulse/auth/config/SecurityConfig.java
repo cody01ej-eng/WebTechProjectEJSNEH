@@ -9,6 +9,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,13 +35,16 @@ public class SecurityConfig {
     private final ObjectMapper objectMapper;
     private final boolean requireHttps;
     private final List<String> allowedOrigins;
+    private final boolean h2ConsoleEnabled;
 
     public SecurityConfig(ObjectMapper objectMapper,
                           @Value("${app.security.require-https:true}") boolean requireHttps,
-                          @Value("${app.security.allowed-origins:}") List<String> allowedOrigins) {
+                          @Value("${app.security.allowed-origins:}") List<String> allowedOrigins,
+                          Environment environment) {
         this.objectMapper = objectMapper;
         this.requireHttps = requireHttps;
         this.allowedOrigins = allowedOrigins.stream().map(String::trim).filter(origin -> !origin.isBlank()).toList();
+        this.h2ConsoleEnabled = List.of(environment.getActiveProfiles()).contains("local-h2");
     }
 
     @Bean
@@ -49,7 +53,16 @@ public class SecurityConfig {
             http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
         }
 
-        http.csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository()))
+        if (h2ConsoleEnabled) {
+            http.csrf(csrf -> csrf
+                            .csrfTokenRepository(csrfTokenRepository())
+                            .ignoringRequestMatchers("/h2-console/**"))
+                    .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+        } else {
+            http.csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository()));
+        }
+
+        http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -57,15 +70,19 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                         .sessionFixation(sessionFixation -> sessionFixation.migrateSession())
                 )
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/auth/csrf").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/registrations/students").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/registrations/instructors").permitAll()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(authorize -> {
+                        if (h2ConsoleEnabled) {
+                            authorize.requestMatchers("/h2-console/**").permitAll();
+                        }
+                        authorize
+                                .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/auth/csrf").permitAll()
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/auth/registrations/students").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/auth/registrations/instructors").permitAll()
+                                .anyRequest().authenticated();
+                })
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, exception) ->
                                 writeFailure(response, HttpServletResponse.SC_UNAUTHORIZED,

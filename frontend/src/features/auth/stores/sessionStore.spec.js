@@ -77,4 +77,5 @@ describe('sessionStore', () => {
     expect(sessionStore.state.initialized).toBe(true)
     expect(sessionStore.startupError.value).toContain('Unable to reach the Project Pulse backend right now.')
   })
+
 })
