@@ -61,7 +61,22 @@
       </p>
     </article>
 
-    <div class="panel-grid">
+    <div class="tab-bar">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        class="tab-btn"
+        :class="{ 'tab-btn--active': activeTab === tab.id }"
+        type="button"
+        @click="activeTab = tab.id"
+      >
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <Transition name="tab-fade" mode="out-in">
+      <div :key="activeTab" class="tab-content">
+    <div class="panel-grid" v-if="activeTab === 'setup'">
       <article class="panel">
         <div class="panel__header">
           <h3>Rubrics and Sections</h3>
@@ -222,7 +237,7 @@
       </article>
     </div>
 
-    <div class="panel-grid">
+    <div class="panel-grid" v-if="activeTab === 'teams'">
       <article class="panel">
         <div class="panel__header">
           <h3>Team Operations</h3>
@@ -352,7 +367,9 @@
           </section>
         </div>
       </article>
+    </div>
 
+    <div class="panel-grid" v-if="activeTab === 'access'">
       <article class="panel">
         <div class="panel__header">
           <h3>Invitations and Access</h3>
@@ -426,7 +443,7 @@
       </article>
     </div>
 
-    <div class="panel-grid">
+    <div class="panel-grid" v-if="activeTab === 'users'">
       <article class="panel">
         <div class="panel__header">
           <h3>User Directory</h3>
@@ -527,14 +544,16 @@
         </div>
       </article>
 
-      <article class="panel">
+      <article v-if="isDev" class="panel">
         <div class="panel__header">
           <h3>Latest Admin Response</h3>
-          <span class="chip">JSON Output</span>
+          <span class="chip">Dev Only</span>
         </div>
         <pre class="code-block">{{ latestResponse }}</pre>
       </article>
     </div>
+      </div>
+    </Transition>
   </section>
 </template>
 
@@ -579,6 +598,15 @@ const loadedUser = ref(null)
 const statusMessage = ref('')
 const errorMessage = ref('')
 const latestResponse = ref('No admin request has been sent yet.')
+
+const activeTab = ref('setup')
+const tabs = [
+  { id: 'setup', label: 'Setup' },
+  { id: 'teams', label: 'Teams' },
+  { id: 'access', label: 'Access' },
+  { id: 'users', label: 'Users' },
+]
+const isDev = import.meta.env.DEV
 
 const rubricForm = reactive({
   name: 'Peer Eval Rubric v1',
