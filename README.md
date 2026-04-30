@@ -77,8 +77,8 @@ Google accounts generally require an app password for SMTP access. Once configur
 
 ## Implemented Phase 2 Scope
 
-- Auth / User: invite students, invite instructors, register student accounts, register instructor accounts, sign in/out with session auth, load current session, search users, edit accounts, deactivate instructors, reactivate instructors
-- Project: create and update rubrics/sections/teams, configure active weeks, assign students, assign instructors, remove students from teams, remove instructors from teams
+- Auth / User: invite students, invite instructors, register student accounts, register instructor accounts, sign in/out with session auth, load current session, search users, edit accounts, delete students, deactivate instructors, reactivate instructors
+- Project: create and update rubrics/sections/teams, configure active weeks, assign students, assign instructors, remove students from teams, remove instructors from teams, delete teams
 - Reporting: create/update/delete WAR activities, submit peer evaluations, load team WAR reports, load student WAR reports, load section peer-evaluation reports, load student self reports, load instructor student reports
 - Requirement / Traceability: create requirement references and implementation links
 - Validation and Security Hardening: friendlier request-validation messages, client-side auth form checks, and controller-level security regression coverage
@@ -95,7 +95,7 @@ Google accounts generally require an app password for SMTP access. Once configur
 - Frontend `npm run test:run` passes with Vitest component/store coverage for auth invitation handling, session state, and admin/student/instructor workspace flows
 - Frontend `npm run test:e2e` passes with Playwright browser coverage for login-to-dashboard routing, admin section-to-invitation flow, and the student guided peer-evaluation journey
 - Backend `mvn verify` passes locally using the repository-scoped Maven installation in `.tools/apache-maven-3.9.15`
-- Current verification covers 13 passing frontend component tests, 3 passing Playwright end-to-end tests, and 48 passing backend tests, and produces the packaged Spring Boot jar in `backend/target/`
+- Current verification covers 20 passing frontend component tests, 3 passing Playwright end-to-end tests, and 58 passing backend tests, and produces the packaged Spring Boot jar in `backend/target/`
 
 ## Documentation
 

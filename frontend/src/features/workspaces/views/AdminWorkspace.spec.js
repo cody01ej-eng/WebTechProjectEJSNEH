@@ -4,6 +4,7 @@ import AdminWorkspace from './AdminWorkspace.vue'
 
 const mocks = vi.hoisted(() => ({
   currentSessionUser: null,
+  deleteStudent: vi.fn(),
   deactivateInstructor: vi.fn(),
   findUsers: vi.fn(),
   getUser: vi.fn(),
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   createRubric: vi.fn(),
   createSection: vi.fn(),
   createTeam: vi.fn(),
+  deleteTeam: vi.fn(),
   getRubrics: vi.fn(),
   getSection: vi.fn(),
   getSections: vi.fn(),
@@ -39,6 +41,7 @@ vi.mock('@/features/auth/stores/sessionStore', () => ({
 }))
 
 vi.mock('@/features/auth/services/authService', () => ({
+  deleteStudent: mocks.deleteStudent,
   deactivateInstructor: mocks.deactivateInstructor,
   findUsers: mocks.findUsers,
   getUser: mocks.getUser,
@@ -55,6 +58,7 @@ vi.mock('@/features/projects/services/projectService', () => ({
   createRubric: mocks.createRubric,
   createSection: mocks.createSection,
   createTeam: mocks.createTeam,
+  deleteTeam: mocks.deleteTeam,
   getRubrics: mocks.getRubrics,
   getSection: mocks.getSection,
   getSections: mocks.getSections,
@@ -98,6 +102,9 @@ const teamRecord = {
   ]
 }
 
+const clipboardWriteText = vi.fn()
+const confirmMock = vi.fn()
+
 function findPanel(wrapper, title) {
   const panel = wrapper.findAll('article.panel').find((item) => item.find('h3').exists() && item.find('h3').text() === title)
   expect(panel, `Expected panel "${title}" to exist.`).toBeTruthy()
@@ -134,6 +141,19 @@ describe('AdminWorkspace', () => {
     ])
     mocks.getSections.mockResolvedValue([{ ...sectionRecord }])
     mocks.getTeams.mockResolvedValue([{ ...teamRecord }])
+    clipboardWriteText.mockReset()
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: clipboardWriteText
+      }
+    })
+    confirmMock.mockReset()
+    confirmMock.mockReturnValue(true)
+    Object.defineProperty(globalThis.window, 'confirm', {
+      configurable: true,
+      value: confirmMock
+    })
   })
 
   it('syncs section selection into team creation and student invitation workflows', async () => {
@@ -369,5 +389,112 @@ describe('AdminWorkspace', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('1 email delivery failure')
+  })
+
+  it('surfaces manual registration links when invitation email delivery fails', async () => {
+    mocks.inviteInstructors.mockResolvedValue([
+      {
+        id: 31,
+        token: 'invite-token-31',
+        email: 'b.wei@uni.edu',
+        type: 'INSTRUCTOR',
+        status: 'FAILED',
+        sectionName: null,
+        expiresAt: '2026-05-29T21:04:51.511485173',
+        message: 'You have been invited to join Project Pulse as an instructor and complete your account setup.',
+        registrationUrl: 'https://pulse.example/login?mode=instructor-register&token=invite-token-31'
+      }
+    ])
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
+    const forms = invitationPanel.findAll('form')
+    await findField(invitationPanel, 'Instructor Emails').setValue('b.wei@uni.edu')
+    await forms[1].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Copy the manual registration link or token below')
+    expect(wrapper.text()).toContain('Email delivery failed, but this invite can still be completed manually.')
+    expect(wrapper.text()).toContain('invite-token-31')
+    expect(wrapper.text()).toContain('https://pulse.example/login?mode=instructor-register&token=invite-token-31')
+
+    await findButton(invitationPanel, 'Copy Registration Link').trigger('click')
+
+    expect(clipboardWriteText).toHaveBeenCalledWith(
+      'https://pulse.example/login?mode=instructor-register&token=invite-token-31'
+    )
+    expect(wrapper.text()).toContain('Registration link copied.')
+  })
+
+  it('deletes the selected team after admin confirmation', async () => {
+    mocks.deleteTeam.mockResolvedValue({
+      teamId: 19,
+      teamName: 'Pulse Team',
+      removedStudentAssignments: 1,
+      removedInstructorAssignments: 1,
+      deletedWarActivities: 0,
+      deletedPeerEvaluationSubmissions: 0
+    })
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const teamPanel = findPanel(wrapper, 'Team Operations')
+    const forms = teamPanel.findAll('form')
+    await findButton(teamPanel, 'Use Team').trigger('click')
+    await flushPromises()
+    await forms[6].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(confirmMock).toHaveBeenCalled()
+    expect(mocks.deleteTeam).toHaveBeenCalledWith(19)
+    expect(findField(teamPanel, 'Team ID').element.value).toBe('')
+    expect(wrapper.text()).toContain('Team deleted permanently.')
+  })
+
+  it('deletes the selected student after admin confirmation', async () => {
+    mocks.findUsers.mockResolvedValue([
+      {
+        id: 7,
+        firstName: 'Jane',
+        middleInitial: null,
+        lastName: 'Doe',
+        email: 'jane@tcu.edu',
+        role: 'STUDENT',
+        status: 'ACTIVE',
+        sectionId: 12,
+        sectionName: 'Senior Design A',
+        assignedTeamId: 19,
+        assignedTeamName: 'Pulse Team',
+        supervisedTeams: []
+      }
+    ])
+    mocks.deleteStudent.mockResolvedValue({
+      studentId: 7,
+      studentName: 'Jane Doe',
+      deletedWarActivities: 2,
+      deletedPeerEvaluationSubmissions: 1,
+      deletedPeerEvaluationItems: 3
+    })
+
+    const wrapper = mountWorkspace()
+    await flushPromises()
+
+    const userPanel = findPanel(wrapper, 'User Directory')
+    const userForms = userPanel.findAll('form')
+    await findField(userPanel, 'Role').setValue('STUDENT')
+    await userForms[0].trigger('submit.prevent')
+    await flushPromises()
+    await findButton(userPanel, 'Use User').trigger('click')
+    await flushPromises()
+    await userForms[2].trigger('submit.prevent')
+    await flushPromises()
+
+    expect(confirmMock).toHaveBeenCalled()
+    expect(mocks.deleteStudent).toHaveBeenCalledWith(7)
+    expect(findField(userPanel, 'User ID').element.value).toBe('')
+    expect(wrapper.text()).toContain('Student deleted permanently.')
   })
 })

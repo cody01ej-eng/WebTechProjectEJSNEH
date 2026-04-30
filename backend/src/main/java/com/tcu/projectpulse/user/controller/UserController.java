@@ -3,12 +3,14 @@ package com.tcu.projectpulse.user.controller;
 import com.tcu.projectpulse.shared.api.Result;
 import com.tcu.projectpulse.user.domain.UserRole;
 import com.tcu.projectpulse.user.dto.InstructorDeactivationRequest;
+import com.tcu.projectpulse.user.dto.StudentDeletionResponse;
 import com.tcu.projectpulse.user.dto.UserAccountResponse;
 import com.tcu.projectpulse.user.dto.UserProfileUpdateRequest;
 import com.tcu.projectpulse.user.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,5 +61,11 @@ public class UserController {
     @PostMapping("/{userId}/reactivate")
     public Result<UserAccountResponse> reactivateInstructor(@PathVariable Long userId) {
         return Result.success("Reactivate instructor success", userService.reactivateInstructor(userId));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{userId}")
+    public Result<StudentDeletionResponse> deleteStudent(@PathVariable Long userId) {
+        return Result.success("Delete student success", userService.deleteStudent(userId));
     }
 }

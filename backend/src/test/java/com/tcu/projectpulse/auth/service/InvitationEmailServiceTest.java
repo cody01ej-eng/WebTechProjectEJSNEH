@@ -124,4 +124,24 @@ class InvitationEmailServiceTest {
         assertThat(response.delivered()).isFalse();
         assertThat(response.detail()).contains("APP_EMAIL_ENABLED=true");
     }
+
+    @Test
+    void registrationUrlRemainsAvailableWhenEmailDeliveryIsDisabled() {
+        InvitationEmailService disabledService = new InvitationEmailService(
+                mailSender,
+                new InvitationEmailProperties(false, "http://localhost:5173", "noreply@projectpulse.local", "Project Pulse Team")
+        );
+        Invitation invitation = new Invitation(
+                "instructor-token",
+                "instructor.one@tcu.edu",
+                InvitationType.INSTRUCTOR,
+                InvitationStatus.PENDING,
+                null,
+                LocalDateTime.of(2026, 5, 23, 12, 0),
+                "Use this invitation to complete your instructor account setup."
+        );
+
+        assertThat(disabledService.registrationUrl(invitation))
+                .isEqualTo("http://localhost:5173/login?mode=instructor-register&token=instructor-token");
+    }
 }

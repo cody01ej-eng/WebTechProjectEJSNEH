@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from '@/shared/services/apiClient'
+import { apiDelete, apiGet, apiPost, apiPut } from '@/shared/services/apiClient'
 
 export function login(payload) {
   return apiPost('/auth/login', payload)
@@ -46,4 +46,8 @@ export function deactivateInstructor(userId, payload) {
 
 export function reactivateInstructor(userId) {
   return apiPost(`/users/${userId}/reactivate`)
+}
+
+export function deleteStudent(userId) {
+  return apiDelete(`/users/${userId}`)
 }

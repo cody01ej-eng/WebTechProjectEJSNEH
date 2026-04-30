@@ -3,6 +3,7 @@ package com.tcu.projectpulse.project.controller;
 import com.tcu.projectpulse.project.dto.AssignInstructorsRequest;
 import com.tcu.projectpulse.project.dto.AssignStudentsRequest;
 import com.tcu.projectpulse.project.dto.CreateTeamRequest;
+import com.tcu.projectpulse.project.dto.TeamDeletionResponse;
 import com.tcu.projectpulse.project.dto.TeamResponse;
 import com.tcu.projectpulse.project.dto.UpdateTeamRequest;
 import com.tcu.projectpulse.project.service.TeamService;
@@ -81,5 +82,11 @@ public class TeamController {
     public Result<TeamResponse> removeInstructor(@PathVariable Long teamId,
                                                  @PathVariable Long instructorId) {
         return Result.success("Remove instructor success", teamService.removeInstructor(teamId, instructorId));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{teamId}")
+    public Result<TeamDeletionResponse> deleteTeam(@PathVariable Long teamId) {
+        return Result.success("Delete team success", teamService.deleteTeam(teamId));
     }
 }

@@ -241,11 +241,15 @@
       <article class="panel">
         <div class="panel__header">
           <h3>Team Operations</h3>
-          <span class="chip">UC-7 through UC-13, UC-19, UC-20</span>
+          <span class="chip">UC-7 through UC-14, UC-19, UC-20</span>
         </div>
         <p class="muted-note">
           New teams default to {{ selectedSectionLabel }} when a section is selected. Roster updates use the currently
           selected team.
+        </p>
+        <p class="muted-note">
+          Team deletion is permanent. Deleting a team automatically removes assigned students and instructors from that
+          team, then physically deletes associated WARs and peer evaluations.
         </p>
 
         <form class="form-grid" @submit.prevent="handleCreateTeam">
@@ -344,6 +348,10 @@
           <button class="button button--ghost" type="submit">Remove Instructor</button>
         </form>
 
+        <form class="form-grid form-grid--inline" @submit.prevent="handleDeleteTeam">
+          <button class="button button--danger" type="submit">Delete Team</button>
+        </form>
+
         <div class="data-grid" v-if="loadedTeam">
           <section class="data-card">
             <h4>Students</h4>
@@ -440,6 +448,51 @@
           </label>
           <button class="button button--ghost" type="submit">Reactivate Instructor</button>
         </form>
+
+        <section v-if="latestInvitationResults.length" class="invite-results">
+          <div class="panel__header">
+            <h4>Latest Invitation Results</h4>
+            <span class="chip">Manual Fallback</span>
+          </div>
+          <ul class="stack-list">
+            <li v-for="invitation in latestInvitationResults" :key="invitation.id" class="stack-list__item">
+              <strong>{{ invitation.email }}</strong>
+              <span>{{ invitation.type }} - {{ invitation.status }}</span>
+              <p>{{ invitation.message }}</p>
+              <p v-if="invitation.status === 'FAILED'" class="muted-note">
+                Email delivery failed, but this invite can still be completed manually.
+              </p>
+              <p class="invite-result__meta">
+                Expires {{ formatExpiration(invitation.expiresAt) }}
+              </p>
+              <div class="invite-result__value">
+                <small>Token</small>
+                <code class="inline-code">{{ invitation.token }}</code>
+              </div>
+              <div v-if="invitation.registrationUrl" class="invite-result__value">
+                <small>Registration Link</small>
+                <code class="inline-code">{{ invitation.registrationUrl }}</code>
+              </div>
+              <div class="stack-list__actions">
+                <button
+                  class="button button--ghost button--compact"
+                  type="button"
+                  @click="copyInviteValue(invitation.token, 'Invitation token copied.')"
+                >
+                  Copy Token
+                </button>
+                <button
+                  v-if="invitation.registrationUrl"
+                  class="button button--ghost button--compact"
+                  type="button"
+                  @click="copyInviteValue(invitation.registrationUrl, 'Registration link copied.')"
+                >
+                  Copy Registration Link
+                </button>
+              </div>
+            </li>
+          </ul>
+        </section>
       </article>
     </div>
 
@@ -447,8 +500,12 @@
       <article class="panel">
         <div class="panel__header">
           <h3>User Directory</h3>
-          <span class="chip">UC-15, UC-16, UC-21, UC-22</span>
+          <span class="chip">UC-15, UC-16, UC-17, UC-21, UC-22</span>
         </div>
+        <p class="muted-note">
+          Student deletion is permanent. Deleting a student physically removes the student and associated WARs and peer
+          evaluations from the system.
+        </p>
 
         <form class="form-grid" @submit.prevent="handleSearchUsers">
           <label class="field">
@@ -509,6 +566,10 @@
           <button class="button" type="submit">Save User Changes</button>
         </form>
 
+        <form class="form-grid form-grid--inline" @submit.prevent="handleDeleteStudent">
+          <button class="button button--danger" type="submit">Delete Student</button>
+        </form>
+
         <div class="data-grid" v-if="loadedUser">
           <section class="data-card">
             <h4>Loaded User</h4>
@@ -560,6 +621,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
+  deleteStudent,
   deactivateInstructor,
   findUsers,
   getUser,
@@ -576,6 +638,7 @@ import {
   createRubric,
   createSection,
   createTeam,
+  deleteTeam,
   getRubrics,
   getSection,
   getSections,
@@ -595,6 +658,7 @@ const userResults = ref([])
 const loadedSection = ref(null)
 const loadedTeam = ref(null)
 const loadedUser = ref(null)
+const latestInvitationResults = ref([])
 const statusMessage = ref('')
 const errorMessage = ref('')
 const latestResponse = ref('No admin request has been sent yet.')
@@ -729,12 +793,16 @@ function formatUserName(user) {
   return [user.firstName, user.middleInitial, user.lastName].filter(Boolean).join(' ')
 }
 
+function formatExpiration(value) {
+  return new Date(value).toLocaleString()
+}
+
 function summarizeInvitationResult(label, invitations) {
   const failedCount = invitations.filter((invitation) => invitation.status === 'FAILED').length
   if (failedCount === 0) {
     return `${label} invitation email${invitations.length === 1 ? '' : 's'} sent.`
   }
-  return `${label} invitations processed, but ${failedCount} email delivery failure${failedCount === 1 ? '' : 's'} occurred. Review the response details and SMTP configuration.`
+  return `${label} invitations processed, but ${failedCount} email delivery failure${failedCount === 1 ? '' : 's'} occurred. Copy the manual registration link or token below, or review SMTP configuration.`
 }
 
 function setSuccess(message, payload) {
@@ -746,6 +814,19 @@ function setSuccess(message, payload) {
 function setError(error) {
   statusMessage.value = ''
   errorMessage.value = error.message
+}
+
+async function copyInviteValue(value, successMessage) {
+  try {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error('Clipboard access is not available in this browser.')
+    }
+    await navigator.clipboard.writeText(value)
+    statusMessage.value = successMessage
+    errorMessage.value = ''
+  } catch (error) {
+    setError(error)
+  }
 }
 
 function applySection(section) {
@@ -1010,6 +1091,33 @@ async function handleRemoveInstructor() {
   }
 }
 
+async function handleDeleteTeam() {
+  try {
+    const teamId = Number(editTeamForm.teamId)
+    const teamName = loadedTeam.value?.name || editTeamForm.name || `team ${teamId}`
+    const confirmed = window.confirm(
+      `Delete ${teamName}? This permanently removes the team and deletes associated WARs and peer evaluations.`
+    )
+
+    if (!confirmed) {
+      statusMessage.value = 'Team deletion cancelled.'
+      errorMessage.value = ''
+      return
+    }
+
+    const response = await deleteTeam(teamId)
+    loadedTeam.value = null
+    editTeamForm.teamId = ''
+    editTeamForm.name = ''
+    editTeamForm.description = ''
+    editTeamForm.websiteUrl = ''
+    setSuccess('Team deleted permanently.', response)
+    await loadReferenceData()
+  } catch (error) {
+    setError(error)
+  }
+}
+
 async function handleInviteStudents() {
   try {
     const response = await inviteStudents({
@@ -1017,6 +1125,7 @@ async function handleInviteStudents() {
       emails: splitEmails(studentInvitation.emails),
       message: studentInvitation.message
     })
+    latestInvitationResults.value = response
     setSuccess(summarizeInvitationResult('Student', response), response)
   } catch (error) {
     setError(error)
@@ -1030,6 +1139,7 @@ async function handleInviteInstructors() {
       emails: splitEmails(instructorInvitation.emails),
       message: instructorInvitation.message
     })
+    latestInvitationResults.value = response
     setSuccess(summarizeInvitationResult('Instructor', response), response)
   } catch (error) {
     setError(error)
@@ -1097,6 +1207,34 @@ async function handleUpdateUser() {
     })
     applyUser(response)
     setSuccess('User account updated.', response)
+  } catch (error) {
+    setError(error)
+  }
+}
+
+async function handleDeleteStudent() {
+  try {
+    const userId = Number(userForm.id)
+    const studentName = loadedUser.value ? formatUserName(loadedUser.value) : `student ${userId}`
+    const confirmed = window.confirm(
+      `Delete ${studentName}? This permanently removes the student and deletes associated WARs and peer evaluations.`
+    )
+
+    if (!confirmed) {
+      statusMessage.value = 'Student deletion cancelled.'
+      errorMessage.value = ''
+      return
+    }
+
+    const response = await deleteStudent(userId)
+    loadedUser.value = null
+    userForm.id = ''
+    userForm.firstName = ''
+    userForm.middleInitial = ''
+    userForm.lastName = ''
+    userForm.email = ''
+    setSuccess('Student deleted permanently.', response)
+    await loadReferenceData()
   } catch (error) {
     setError(error)
   }

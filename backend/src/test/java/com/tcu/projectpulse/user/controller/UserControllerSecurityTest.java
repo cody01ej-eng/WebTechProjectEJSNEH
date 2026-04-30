@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -16,6 +17,7 @@ import com.tcu.projectpulse.auth.service.AuthorizationService;
 import com.tcu.projectpulse.shared.api.StatusCode;
 import com.tcu.projectpulse.user.domain.UserRole;
 import com.tcu.projectpulse.user.domain.UserStatus;
+import com.tcu.projectpulse.user.dto.StudentDeletionResponse;
 import com.tcu.projectpulse.user.dto.UserAccountResponse;
 import com.tcu.projectpulse.user.service.UserService;
 import java.util.List;
@@ -283,6 +285,38 @@ class UserControllerSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.flag").value(true))
                 .andExpect(jsonPath("$.data.id").value(5));
+    }
+
+    @Test
+    void deleteStudentWithoutAuthenticationReturnsUnauthorized() throws Exception {
+        mockMvc.perform(delete("/users/7").with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.UNAUTHORIZED))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    @WithMockUser(roles = "INSTRUCTOR")
+    void deleteStudentAsInstructorReturnsForbidden() throws Exception {
+        mockMvc.perform(delete("/users/7").with(csrf()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void deleteStudentAsAdminReturnsDeletionSummary() throws Exception {
+        when(userService.deleteStudent(7L)).thenReturn(new StudentDeletionResponse(7L, "Jane Doe", 4, 2, 3));
+
+        mockMvc.perform(delete("/users/7").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.studentId").value(7))
+                .andExpect(jsonPath("$.data.studentName").value("Jane Doe"))
+                .andExpect(jsonPath("$.data.deletedPeerEvaluationItems").value(3));
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────────

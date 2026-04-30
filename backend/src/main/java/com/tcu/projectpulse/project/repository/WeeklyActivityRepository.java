@@ -8,6 +8,10 @@ public interface WeeklyActivityRepository extends JpaRepository<WeeklyActivity, 
 
     boolean existsByTeamSectionId(Long sectionId);
 
+    List<WeeklyActivity> findByTeamId(Long teamId);
+
+    List<WeeklyActivity> findByStudentId(Long studentId);
+
     List<WeeklyActivity> findByTeamIdAndActiveWeekWeekStartDateOrderByStudentLastNameAscStudentFirstNameAsc(Long teamId,
                                                                                                             java.time.LocalDate weekStartDate);
 

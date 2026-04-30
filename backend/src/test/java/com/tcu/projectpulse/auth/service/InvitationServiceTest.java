@@ -95,6 +95,10 @@ class InvitationServiceTest {
         });
         when(invitationEmailService.sendInvitation(any(Invitation.class), any(UserAccount.class)))
                 .thenReturn(InvitationDeliveryAttempt.delivered("sent"));
+        when(invitationEmailService.registrationUrl(any(Invitation.class))).thenAnswer(invocation -> {
+            Invitation invitation = invocation.getArgument(0);
+            return "https://projectpulse.example.com/login?mode=student-register&token=" + invitation.getToken();
+        });
 
         List<InvitationResponse> response = invitationService.inviteStudents(request);
 
@@ -103,6 +107,7 @@ class InvitationServiceTest {
                 .containsExactly("student.one@tcu.edu", "student.two@tcu.edu");
         assertThat(response).extracting(InvitationResponse::status)
                 .containsOnly(InvitationStatus.PENDING);
+        assertThat(response).allSatisfy(invitation -> assertThat(invitation.registrationUrl()).contains(invitation.token()));
         verify(invitationEmailService, times(2)).sendInvitation(any(Invitation.class), any(UserAccount.class));
     }
 
@@ -141,10 +146,20 @@ class InvitationServiceTest {
         });
         when(invitationEmailService.sendInvitation(any(Invitation.class), any(UserAccount.class)))
                 .thenReturn(InvitationDeliveryAttempt.failed("SMTP rejected the message"));
+        when(invitationEmailService.registrationUrl(any(Invitation.class))).thenAnswer(invocation -> {
+            Invitation invitation = invocation.getArgument(0);
+            return "https://projectpulse.example.com/login?mode=student-register&token=" + invitation.getToken();
+        });
 
         List<InvitationResponse> response = invitationService.inviteStudents(request);
 
-        assertThat(response).singleElement().extracting(InvitationResponse::status).isEqualTo(InvitationStatus.FAILED);
+        assertThat(response).singleElement()
+                .satisfies(invitation -> {
+                    assertThat(invitation.status()).isEqualTo(InvitationStatus.FAILED);
+                    assertThat(invitation.registrationUrl()).isEqualTo(
+                            "https://projectpulse.example.com/login?mode=student-register&token=" + invitation.token()
+                    );
+                });
         verify(invitationRepository, times(2)).save(any(Invitation.class));
     }
 
@@ -211,6 +226,10 @@ class InvitationServiceTest {
         });
         when(invitationEmailService.sendInvitation(any(Invitation.class), any(UserAccount.class)))
                 .thenReturn(InvitationDeliveryAttempt.delivered("sent"));
+        when(invitationEmailService.registrationUrl(any(Invitation.class))).thenAnswer(invocation -> {
+            Invitation invitation = invocation.getArgument(0);
+            return "https://projectpulse.example.com/login?mode=student-register&token=" + invitation.getToken();
+        });
 
         List<InvitationResponse> response = invitationService.inviteStudents(request);
 
@@ -219,7 +238,7 @@ class InvitationServiceTest {
     }
 
     @Test
-    void findPendingInvitationRejectsFailedInvitations() {
+    void findPendingInvitationAllowsFailedInvitationsToBeUsedAsManualFallbacks() {
         Invitation invitation = new Invitation(
                 "failed-token",
                 "student.one@tcu.edu",
@@ -232,8 +251,6 @@ class InvitationServiceTest {
 
         when(invitationRepository.findByToken("failed-token")).thenReturn(Optional.of(invitation));
 
-        assertThatThrownBy(() -> invitationService.findPendingInvitation("failed-token", InvitationType.STUDENT))
-                .isInstanceOf(InvalidArgumentException.class)
-                .hasMessage("Invitation delivery failed. Ask an admin to resend your invitation");
+        assertThat(invitationService.findPendingInvitation("failed-token", InvitationType.STUDENT)).isSameAs(invitation);
     }
 }

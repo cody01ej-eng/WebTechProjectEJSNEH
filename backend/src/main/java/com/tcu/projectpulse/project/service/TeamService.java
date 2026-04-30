@@ -6,10 +6,13 @@ import com.tcu.projectpulse.project.domain.TeamInstructorAssignment;
 import com.tcu.projectpulse.project.dto.AssignInstructorsRequest;
 import com.tcu.projectpulse.project.dto.AssignStudentsRequest;
 import com.tcu.projectpulse.project.dto.CreateTeamRequest;
+import com.tcu.projectpulse.project.dto.TeamDeletionResponse;
 import com.tcu.projectpulse.project.dto.TeamResponse;
 import com.tcu.projectpulse.project.dto.UpdateTeamRequest;
+import com.tcu.projectpulse.project.repository.PeerEvaluationSubmissionRepository;
 import com.tcu.projectpulse.project.repository.SeniorDesignTeamRepository;
 import com.tcu.projectpulse.project.repository.TeamInstructorAssignmentRepository;
+import com.tcu.projectpulse.project.repository.WeeklyActivityRepository;
 import com.tcu.projectpulse.shared.exception.ConflictException;
 import com.tcu.projectpulse.shared.exception.InvalidArgumentException;
 import com.tcu.projectpulse.shared.exception.ResourceNotFoundException;
@@ -28,15 +31,21 @@ public class TeamService {
 
     private final SeniorDesignTeamRepository teamRepository;
     private final TeamInstructorAssignmentRepository assignmentRepository;
+    private final WeeklyActivityRepository weeklyActivityRepository;
+    private final PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository;
     private final UserAccountRepository userAccountRepository;
     private final SectionService sectionService;
 
     public TeamService(SeniorDesignTeamRepository teamRepository,
                        TeamInstructorAssignmentRepository assignmentRepository,
+                       WeeklyActivityRepository weeklyActivityRepository,
+                       PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository,
                        UserAccountRepository userAccountRepository,
                        SectionService sectionService) {
         this.teamRepository = teamRepository;
         this.assignmentRepository = assignmentRepository;
+        this.weeklyActivityRepository = weeklyActivityRepository;
+        this.peerEvaluationSubmissionRepository = peerEvaluationSubmissionRepository;
         this.userAccountRepository = userAccountRepository;
         this.sectionService = sectionService;
     }
@@ -132,6 +141,32 @@ public class TeamService {
         }
         assignmentRepository.deleteByTeamIdAndInstructorId(teamId, instructorId);
         return getTeam(teamId);
+    }
+
+    public TeamDeletionResponse deleteTeam(Long teamId) {
+        SeniorDesignTeam team = getTeamEntity(teamId);
+
+        List<UserAccount> assignedStudents = userAccountRepository.findByAssignedTeamId(teamId);
+        assignedStudents.forEach(student -> student.assignToTeam(null));
+
+        List<TeamInstructorAssignment> instructorAssignments = assignmentRepository.findByTeamId(teamId);
+        List<com.tcu.projectpulse.project.domain.WeeklyActivity> warActivities = weeklyActivityRepository.findByTeamId(teamId);
+        List<com.tcu.projectpulse.project.domain.PeerEvaluationSubmission> peerEvaluationSubmissions =
+                peerEvaluationSubmissionRepository.findByTeamId(teamId);
+
+        assignmentRepository.deleteAll(instructorAssignments);
+        weeklyActivityRepository.deleteAll(warActivities);
+        peerEvaluationSubmissionRepository.deleteAll(peerEvaluationSubmissions);
+        teamRepository.delete(team);
+
+        return new TeamDeletionResponse(
+                teamId,
+                team.getName(),
+                assignedStudents.size(),
+                instructorAssignments.size(),
+                warActivities.size(),
+                peerEvaluationSubmissions.size()
+        );
     }
 
     @Transactional(readOnly = true)

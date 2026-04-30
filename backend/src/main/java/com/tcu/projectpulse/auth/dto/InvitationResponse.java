@@ -12,6 +12,7 @@ public record InvitationResponse(
         InvitationStatus status,
         String sectionName,
         LocalDateTime expiresAt,
-        String message
+        String message,
+        String registrationUrl
 ) {
 }

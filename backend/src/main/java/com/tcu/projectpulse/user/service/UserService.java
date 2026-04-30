@@ -1,7 +1,13 @@
 package com.tcu.projectpulse.user.service;
 
+import com.tcu.projectpulse.project.domain.PeerEvaluationItem;
+import com.tcu.projectpulse.project.domain.PeerEvaluationSubmission;
 import com.tcu.projectpulse.project.domain.TeamInstructorAssignment;
+import com.tcu.projectpulse.project.domain.WeeklyActivity;
+import com.tcu.projectpulse.project.repository.PeerEvaluationItemRepository;
+import com.tcu.projectpulse.project.repository.PeerEvaluationSubmissionRepository;
 import com.tcu.projectpulse.project.repository.TeamInstructorAssignmentRepository;
+import com.tcu.projectpulse.project.repository.WeeklyActivityRepository;
 import com.tcu.projectpulse.shared.exception.ConflictException;
 import com.tcu.projectpulse.shared.exception.InvalidArgumentException;
 import com.tcu.projectpulse.shared.exception.ResourceNotFoundException;
@@ -10,6 +16,7 @@ import com.tcu.projectpulse.user.domain.UserRole;
 import com.tcu.projectpulse.user.domain.UserStatus;
 import com.tcu.projectpulse.user.dto.UserAccountResponse;
 import com.tcu.projectpulse.user.dto.InstructorDeactivationRequest;
+import com.tcu.projectpulse.user.dto.StudentDeletionResponse;
 import com.tcu.projectpulse.user.dto.UserProfileUpdateRequest;
 import com.tcu.projectpulse.user.repository.UserAccountRepository;
 import java.util.Comparator;
@@ -24,11 +31,20 @@ public class UserService {
 
     private final UserAccountRepository userAccountRepository;
     private final TeamInstructorAssignmentRepository teamInstructorAssignmentRepository;
+    private final WeeklyActivityRepository weeklyActivityRepository;
+    private final PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository;
+    private final PeerEvaluationItemRepository peerEvaluationItemRepository;
 
     public UserService(UserAccountRepository userAccountRepository,
-                       TeamInstructorAssignmentRepository teamInstructorAssignmentRepository) {
+                       TeamInstructorAssignmentRepository teamInstructorAssignmentRepository,
+                       WeeklyActivityRepository weeklyActivityRepository,
+                       PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository,
+                       PeerEvaluationItemRepository peerEvaluationItemRepository) {
         this.userAccountRepository = userAccountRepository;
         this.teamInstructorAssignmentRepository = teamInstructorAssignmentRepository;
+        this.weeklyActivityRepository = weeklyActivityRepository;
+        this.peerEvaluationSubmissionRepository = peerEvaluationSubmissionRepository;
+        this.peerEvaluationItemRepository = peerEvaluationItemRepository;
     }
 
     @Transactional(readOnly = true)
@@ -74,6 +90,30 @@ public class UserService {
         }
         instructor.activate();
         return toResponse(instructor);
+    }
+
+    public StudentDeletionResponse deleteStudent(Long userId) {
+        UserAccount student = findUser(userId);
+        if (student.getRole() != UserRole.STUDENT) {
+            throw new InvalidArgumentException("User " + userId + " is not a student");
+        }
+
+        List<WeeklyActivity> warActivities = weeklyActivityRepository.findByStudentId(userId);
+        List<PeerEvaluationSubmission> peerEvaluationSubmissions = peerEvaluationSubmissionRepository.findByAuthorId(userId);
+        List<PeerEvaluationItem> peerEvaluationItems = peerEvaluationItemRepository.findByEvaluateeId(userId);
+
+        weeklyActivityRepository.deleteAll(warActivities);
+        peerEvaluationSubmissionRepository.deleteAll(peerEvaluationSubmissions);
+        peerEvaluationItemRepository.deleteAll(peerEvaluationItems);
+        userAccountRepository.delete(student);
+
+        return new StudentDeletionResponse(
+                userId,
+                fullName(student),
+                warActivities.size(),
+                peerEvaluationSubmissions.size(),
+                peerEvaluationItems.size()
+        );
     }
 
     private UserAccount findUser(Long userId) {

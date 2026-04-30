@@ -45,6 +45,13 @@ public class InvitationEmailService {
         }
     }
 
+    public String registrationUrl(Invitation invitation) {
+        if (!StringUtils.hasText(emailProperties.baseUrl())) {
+            return null;
+        }
+        return buildRegistrationUrl(invitation);
+    }
+
     private String validateConfiguration() {
         if (!emailProperties.enabled()) {
             return "Invitation email delivery is disabled. Set APP_EMAIL_ENABLED=true and configure SMTP settings.";
@@ -60,7 +67,7 @@ public class InvitationEmailService {
 
     private String buildBody(Invitation invitation, UserAccount invitedBy) {
         String adminDisplayName = buildAdminDisplayName(invitedBy);
-        String registrationUrl = buildRegistrationUrl(invitation);
+        String registrationUrl = registrationUrl(invitation);
         StringBuilder body = new StringBuilder()
                 .append("Hello,\n\n")
                 .append(adminDisplayName)

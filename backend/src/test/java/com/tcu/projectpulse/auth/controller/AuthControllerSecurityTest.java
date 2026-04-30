@@ -190,7 +190,8 @@ class AuthControllerSecurityTest {
                         InvitationStatus.PENDING,
                         "2026-2027",
                         LocalDateTime.of(2026, 5, 1, 12, 0),
-                        "Welcome to Project Pulse."
+                        "Welcome to Project Pulse.",
+                        "https://projectpulse.example.com/login?mode=student-register&token=student-token"
                 )
         ));
 

@@ -44,6 +44,10 @@ export function updateTeam(teamId, payload) {
   return apiPut(`/project/teams/${teamId}`, payload)
 }
 
+export function deleteTeam(teamId) {
+  return apiDelete(`/project/teams/${teamId}`)
+}
+
 export function assignStudents(teamId, payload) {
   return apiPost(`/project/teams/${teamId}/students`, payload)
 }

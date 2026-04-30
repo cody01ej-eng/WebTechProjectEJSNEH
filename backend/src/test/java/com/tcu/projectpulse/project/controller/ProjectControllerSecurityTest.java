@@ -20,10 +20,12 @@ import com.tcu.projectpulse.project.dto.SectionPeerEvaluationReportResponse;
 import com.tcu.projectpulse.project.dto.StudentPeerEvaluationReportResponse;
 import com.tcu.projectpulse.project.dto.StudentWarReportResponse;
 import com.tcu.projectpulse.project.dto.StudentWorkspaceContextResponse;
+import com.tcu.projectpulse.project.dto.TeamDeletionResponse;
 import com.tcu.projectpulse.project.dto.TeamWarReportResponse;
 import com.tcu.projectpulse.project.dto.WeeklyActivityResponse;
 import com.tcu.projectpulse.project.service.ReportingService;
 import com.tcu.projectpulse.project.service.StudentWorkspaceService;
+import com.tcu.projectpulse.project.service.TeamService;
 import com.tcu.projectpulse.project.service.WarService;
 import com.tcu.projectpulse.shared.api.StatusCode;
 import java.math.BigDecimal;
@@ -55,6 +57,9 @@ class ProjectControllerSecurityTest {
 
     @MockitoBean
     private StudentWorkspaceService studentWorkspaceService;
+
+    @MockitoBean
+    private TeamService teamService;
 
     @MockitoBean(name = "authorizationService")
     private AuthorizationService authorizationService;
@@ -404,6 +409,38 @@ class ProjectControllerSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.flag").value(true))
                 .andExpect(jsonPath("$.message").value("Delete WAR activity success"));
+    }
+
+    @Test
+    void deleteTeamWithoutAuthenticationReturnsUnauthorized() throws Exception {
+        mockMvc.perform(delete("/project/teams/19").with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.UNAUTHORIZED))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    @WithMockUser(roles = "INSTRUCTOR")
+    void deleteTeamAsInstructorReturnsForbidden() throws Exception {
+        mockMvc.perform(delete("/project/teams/19").with(csrf()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.flag").value(false))
+                .andExpect(jsonPath("$.code").value(StatusCode.FORBIDDEN))
+                .andExpect(jsonPath("$.message").value("Access denied"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void deleteTeamAsAdminReturnsDeletionSummary() throws Exception {
+        when(teamService.deleteTeam(19L)).thenReturn(new TeamDeletionResponse(19L, "Pulse Team", 3, 1, 6, 2));
+
+        mockMvc.perform(delete("/project/teams/19").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.teamId").value(19))
+                .andExpect(jsonPath("$.data.teamName").value("Pulse Team"))
+                .andExpect(jsonPath("$.data.deletedWarActivities").value(6));
     }
 
     // ─── GET /project/reports/sections/{sectionId}/peer-evaluations ───────────────

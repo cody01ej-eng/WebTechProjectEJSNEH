@@ -70,6 +70,10 @@ class InvitationServiceIntegrationTest {
             }
             return InvitationDeliveryAttempt.delivered("sent");
         });
+        when(invitationEmailService.registrationUrl(any(Invitation.class))).thenAnswer(invocation -> {
+            Invitation invitation = invocation.getArgument(0);
+            return "https://projectpulse.example.com/login?mode=student-register&token=" + invitation.getToken();
+        });
 
         List<InvitationResponse> response = invitationService.inviteStudents(new InvitationBatchRequest(
                 section.getId(),
@@ -81,6 +85,7 @@ class InvitationServiceIntegrationTest {
                 .containsExactly("student.one@tcu.edu", "student.two@tcu.edu");
         assertThat(response).extracting(InvitationResponse::status)
                 .containsExactly(InvitationStatus.PENDING, InvitationStatus.FAILED);
+        assertThat(response).allSatisfy(invitation -> assertThat(invitation.registrationUrl()).contains(invitation.token()));
 
         Invitation deliveredInvitation = invitationRepository.findAll().stream()
                 .filter(invitation -> invitation.getEmail().equals("student.one@tcu.edu"))
@@ -95,6 +100,25 @@ class InvitationServiceIntegrationTest {
         assertThat(deliveredInvitation.getSection().getId()).isEqualTo(section.getId());
         assertThat(failedInvitation.getStatus()).isEqualTo(InvitationStatus.FAILED);
         assertThat(failedInvitation.getMessage()).isEqualTo("Use your registration link to complete setup.");
+    }
+
+    @Test
+    void findPendingInvitationAllowsPersistedFailedInvitationsToSupportManualRegistration() {
+        SeniorDesignSection section = saveSection("2027-2028");
+        Invitation invitation = invitationRepository.save(new Invitation(
+                "failed-token",
+                "student.one@tcu.edu",
+                InvitationType.STUDENT,
+                InvitationStatus.FAILED,
+                section,
+                LocalDateTime.now().plusDays(7),
+                "Use your registration link to complete setup."
+        ));
+
+        Invitation resolvedInvitation = invitationService.findPendingInvitation("failed-token", InvitationType.STUDENT);
+
+        assertThat(resolvedInvitation.getId()).isEqualTo(invitation.getId());
+        assertThat(resolvedInvitation.getStatus()).isEqualTo(InvitationStatus.FAILED);
     }
 
     @Test

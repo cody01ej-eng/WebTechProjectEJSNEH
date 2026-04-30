@@ -23,6 +23,7 @@
 - Completed: student workspace polish using context-driven defaults for WAR and self-report loading plus guided teammate/rubric peer-evaluation scoring
 - Completed: instructor workspace polish using selected student/team focus, shared report-window filters, and clearer snapshot/trend summaries
 - Completed: admin workspace polish using selected section/team/user focus that cascades into setup, invitation, roster, and access-management actions
+- Completed: admin delete workflows for senior design teams and students, including physical-delete cleanup of associated WAR and peer-evaluation data
 - Completed: expanded backend security/controller coverage for auth session endpoints, team/student report access rules, and the student workspace endpoint
 - Completed: H2-backed service integration coverage for invitation lifecycle persistence, reporting aggregates, and student workspace context assembly
 - Completed: Azure-oriented deployment wiring with environment templates, health-check exposure, SPA fallback config, and deploy workflow scaffolding
@@ -48,6 +49,7 @@ Domains:
 - Completed: instructor search, account edit, deactivate, and reactivate workflows
 - Completed: section, active week, rubric, team, student assignment, instructor assignment, and maintenance workflows
 - Completed: team member removal safeguards for students and instructors
+- Completed: team deletion and student deletion workflows with explicit admin confirmations and physical-delete cleanup behavior
 - Completed: WAR activity create, update, and delete services plus team/student reporting services
 - Completed: peer-evaluation submission plus section/student/instructor reporting services
 - Completed: requirement reference and traceability link management
@@ -56,7 +58,7 @@ Domains:
 - Completed: controller-level security tests for authentication, student-only WAR submission, self-report authorization paths, and student workspace endpoint access
 - Completed: persistence-backed integration tests for invitation status transitions, team/section reporting aggregates, and student workspace defaults against seeded H2 data
 - Completed: frontend Vitest setup with component/store tests for invitation-prefilled auth flows, session handling, and student/instructor report workflows
-- Completed: local frontend production build, frontend Vitest runs, Playwright end-to-end runs, and backend Maven verify on the workstation, with 13 passing frontend component tests, 3 passing Playwright end-to-end tests, and 48 passing backend tests
+- Completed: local frontend production build, frontend Vitest runs, Playwright end-to-end runs, and backend Maven verify on the workstation, with 20 passing frontend component tests, 3 passing Playwright end-to-end tests, and 58 passing backend tests
 
 ---
 

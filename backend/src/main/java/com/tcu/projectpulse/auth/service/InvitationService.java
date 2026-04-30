@@ -88,9 +88,6 @@ public class InvitationService {
         if (invitation.getType() != expectedType) {
             throw new InvalidArgumentException("Invitation type does not match registration flow");
         }
-        if (invitation.getStatus() == InvitationStatus.FAILED) {
-            throw new InvalidArgumentException("Invitation delivery failed. Ask an admin to resend your invitation");
-        }
         if (invitation.getStatus() == InvitationStatus.ACCEPTED) {
             throw new InvalidArgumentException("Invitation has already been used");
         }
@@ -111,7 +108,8 @@ public class InvitationService {
                 invitation.getStatus(),
                 invitation.getSection() == null ? null : invitation.getSection().getName(),
                 invitation.getExpiresAt(),
-                invitation.getMessage()
+                invitation.getMessage(),
+                invitationEmailService.registrationUrl(invitation)
         );
     }
 }

@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PeerEvaluationItemRepository extends JpaRepository<PeerEvaluationItem, Long> {
 
+    List<PeerEvaluationItem> findByEvaluateeId(Long evaluateeId);
+
     List<PeerEvaluationItem> findByEvaluateeIdAndSubmissionActiveWeekWeekStartDate(Long evaluateeId, LocalDate weekStartDate);
 
     List<PeerEvaluationItem> findByEvaluateeIdAndSubmissionActiveWeekWeekStartDateBetween(Long evaluateeId,
