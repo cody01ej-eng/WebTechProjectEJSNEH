@@ -127,6 +127,11 @@ function mountWorkspace() {
   return mount(AdminWorkspace)
 }
 
+async function selectTab(wrapper, label) {
+  await findButton(wrapper, label).trigger('click')
+  await flushPromises()
+}
+
 describe('AdminWorkspace', () => {
   beforeEach(() => {
     mocks.currentSessionUser = { ...adminUser }
@@ -161,14 +166,17 @@ describe('AdminWorkspace', () => {
     await flushPromises()
 
     const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
-    const teamPanel = findPanel(wrapper, 'Team Operations')
-    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
     const focusPanel = findPanel(wrapper, 'Admin Focus')
 
     await findButton(sectionDirectoryPanel, 'Use Section').trigger('click')
     await flushPromises()
 
+    await selectTab(wrapper, 'Teams')
+    const teamPanel = findPanel(wrapper, 'Team Operations')
     expect(findField(teamPanel, 'Section').element.value).toBe('12')
+
+    await selectTab(wrapper, 'Access')
+    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
     expect(findField(invitationPanel, 'Section').element.value).toBe('12')
     expect(focusPanel.text()).toContain('Senior Design A')
     expect(wrapper.text()).toContain('Section selected from directory.')
@@ -178,6 +186,7 @@ describe('AdminWorkspace', () => {
     const wrapper = mountWorkspace()
     await flushPromises()
 
+    await selectTab(wrapper, 'Teams')
     const teamPanel = findPanel(wrapper, 'Team Operations')
     const focusPanel = findPanel(wrapper, 'Admin Focus')
 
@@ -233,8 +242,8 @@ describe('AdminWorkspace', () => {
     const wrapper = mountWorkspace()
     await flushPromises()
 
+    await selectTab(wrapper, 'Users')
     const userPanel = findPanel(wrapper, 'User Directory')
-    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
     const focusPanel = findPanel(wrapper, 'Admin Focus')
     const userForms = userPanel.findAll('form')
 
@@ -246,6 +255,9 @@ describe('AdminWorkspace', () => {
 
     expect(mocks.findUsers).toHaveBeenCalledWith('INSTRUCTOR', undefined)
     expect(findField(userPanel, 'User ID').element.value).toBe('4')
+
+    await selectTab(wrapper, 'Access')
+    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
     expect(findField(invitationPanel, 'Instructor ID', 0).element.value).toBe('4')
     expect(focusPanel.text()).toContain('Morgan J Lee')
     expect(wrapper.text()).toContain('User selected from directory.')
@@ -351,11 +363,11 @@ describe('AdminWorkspace', () => {
     await flushPromises()
 
     const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
-    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
-
     await findButton(sectionDirectoryPanel, 'Use Section').trigger('click')
     await flushPromises()
 
+    await selectTab(wrapper, 'Access')
+    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
     await findField(invitationPanel, 'Student Emails').setValue('student.one@tcu.edu; student.two@tcu.edu')
     await invitationPanel.findAll('form')[0].trigger('submit.prevent')
     await flushPromises()
@@ -379,11 +391,11 @@ describe('AdminWorkspace', () => {
     await flushPromises()
 
     const sectionDirectoryPanel = findPanel(wrapper, 'Section Directory')
-    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
-
     await findButton(sectionDirectoryPanel, 'Use Section').trigger('click')
     await flushPromises()
 
+    await selectTab(wrapper, 'Access')
+    const invitationPanel = findPanel(wrapper, 'Invitations and Access')
     await findField(invitationPanel, 'Student Emails').setValue('student.one@tcu.edu; student.two@tcu.edu')
     await invitationPanel.findAll('form')[0].trigger('submit.prevent')
     await flushPromises()
@@ -409,6 +421,7 @@ describe('AdminWorkspace', () => {
     const wrapper = mountWorkspace()
     await flushPromises()
 
+    await selectTab(wrapper, 'Access')
     const invitationPanel = findPanel(wrapper, 'Invitations and Access')
     const forms = invitationPanel.findAll('form')
     await findField(invitationPanel, 'Instructor Emails').setValue('b.wei@uni.edu')
@@ -441,6 +454,7 @@ describe('AdminWorkspace', () => {
     const wrapper = mountWorkspace()
     await flushPromises()
 
+    await selectTab(wrapper, 'Teams')
     const teamPanel = findPanel(wrapper, 'Team Operations')
     const forms = teamPanel.findAll('form')
     await findButton(teamPanel, 'Use Team').trigger('click')
@@ -482,6 +496,7 @@ describe('AdminWorkspace', () => {
     const wrapper = mountWorkspace()
     await flushPromises()
 
+    await selectTab(wrapper, 'Users')
     const userPanel = findPanel(wrapper, 'User Directory')
     const userForms = userPanel.findAll('form')
     await findField(userPanel, 'Role').setValue('STUDENT')
