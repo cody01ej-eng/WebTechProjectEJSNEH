@@ -2,6 +2,10 @@
 
 Project Pulse is a docs-first full-stack application for managing weekly activity reports (WAR) and peer evaluations in TCU senior design courses.
 
+## Website Link
+
+https://salmon-dune-000f6be0f.7.azurestaticapps.net/admin
+
 ## Current State
 
 The repository now includes Phase 1 foundation work and a substantial Phase 2 core-domain implementation:
